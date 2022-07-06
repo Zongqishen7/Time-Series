@@ -1,0 +1,104 @@
+---
+title: "FA542"
+author: "Zongqi"
+date: "4/20/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r message=FALSE, warning=FALSE}
+library(gdata)
+stock <- read.csv("~/Documents/Stevens_second_semester/FA542/Homework/Homework5/homework05.csv")
+nrow(stock)
+o_rt <- stock[2:720,2]
+o_rt_1 <- stock[1:719,2]
+ct1 <- o_rt - o_rt_1
+
+t_rt <- stock[2:720,3]
+t_rt_1 <- stock[1:719,3]
+ct10 <- t_rt - t_rt_1
+r <- cbind(ct1, ct10)
+```
+
+
+$(i):$ single time series autoregressive models
+```{r}
+#par(c(2,2))
+#plot.ts(stock$DGS1, main="MSFT prices", ylab="Prices")
+#plot.ts(stock$DGS10, main="MSFT prices", ylab="Prices")
+cr <- NA
+for (p in 0:10){ 
+    tmp = arima(ct1, order=c(p,0,0))
+    cr <- cbind(cr,BIC(tmp))            
+}
+cr
+#AR(8)is the best 
+md1 <- arima(ct1 , order = c(8, 0, 0))
+
+cr2 <- NA
+for (p in 0:10){ 
+    tmp = arima(ct10, order=c(p,0,0))
+    cr2 <- cbind(cr2,BIC(tmp))            
+}
+cr2
+md2 <- arima(ct10 , order = c(8, 0, 0))
+
+```
+
+
+$(ii) ; (iii)$
+```{r}
+library(vars)
+mdl = VAR(r, lag.max = 8 , ic = "AIC" , type = "const")
+summary(mdl)
+C = summary(mdl)$covres # covariance matrix of innovations
+C
+# Structural form
+smdl = BQ(mdl)
+summary(smdl)
+
+```
+
+$ (iv) $
+```{r}
+length(ct1)
+length(ct10)
+train <- ct1[1:699]
+train2 <- ct10[1:699]
+test1 <- ct1[700:719]
+test2 <- ct10[700:719]
+```
+
+prediction for md1 & md2
+```{r}
+predicted1 <- predict(md1, n.ahead = 20)$pred
+predicted2 <- predict(md2, n.ahead = 20)$pred
+mse1 <- mean((predicted1 - test1)^2)
+mse2 <- mean((predicted2 - test2)^2)
+mse1
+mse2
+```
+I calculate the mean squared error here to evaluated the result of prediction.
+
+
+prediction for mdl
+```{r}
+library(vars)
+predictedvar <- predict(mdl, n.ahead = 20)
+predictedvar_ct1 <- predictedvar$fcst$ct1[,1]
+predictedvar_ct10 <- predictedvar$fcst$ct10[,1]
+mse1_v <- mean((predictedvar_ct1 - test1)^2)
+mse2_v <- mean((predictedvar_ct10 - test2)^2)
+mse1_v
+mse2_v
+
+```
+By compare the mean squared of single single time series autoregressive models and vector autoregressive model, here we can see for both ct1 and ct10, the single time series autoregressive models is the better.
+
+
+
+
+
+
+
+
