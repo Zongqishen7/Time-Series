@@ -1,0 +1,309 @@
+---
+title: "FA542-Homework2"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Problem1
+```{r}
+## AR(2):
+# r{t} = 0.1 - 0.5r{t-2} + a{t}
+# a{t} ~ N(0,.2)
+phi0 <- 0.1
+phi1 <- 0
+phi2 <- -0.5
+sig2 <- 0.2
+```
+
+(i)  mean and variance
+```{r}
+mu <- phi0/(1-phi1-phi2)
+mu
+var_rt <- (1-phi2)*sig2/((1+phi2)*(1-phi1-phi2)*(1+phi1-phi2))
+var_rt
+print(" mean and variance of the return series rt")
+```
+(ii) autocorrelations
+```{r}
+gamma = rep(0,3)
+p0 = 1
+p1 <- phi1/(1-phi2)
+p1
+p2 <- (phi1^2 / (1-phi2)) + phi2*p0
+p2
+print("lag-1 and lag-2 autocorrelations of rt")
+```
+(iii) forecast
+```{r}
+r100 = 0.2
+r99 = 0.05
+r101 = phi0 + phi1*r100 + phi2*r99
+r101_sig2 = sig2
+r102 = phi0 + phi1*r101 + phi2*r100
+r102_sig2 = (1+phi1^2)*sig2
+print("1- and 2-step ahead forecasts")
+c(r101,r102)
+print("standard deviations of the forecast errors")
+c(r101_sig2,r102_sig2)
+```
+
+(iv) Experimentally
+(a)(b)
+```{r}
+set.seed(7089)
+r0 = 0.2
+T = 1000 # Time steps
+ts.sim = arima.sim(n=T, model=list(ar=c(phi1,phi2)),
+                   innov=phi0+sqrt(sig2)*rnorm(T))
+print(" sample mean and variance")
+mean(ts.sim)
+var(ts.sim)
+print("compare  mean and variance with analytical")
+mean(ts.sim) - mu
+var(ts.sim) - var_rt
+```
+(c)
+```{r}
+# Experimental statistics
+mu_hat = mean(ts.sim)
+gamma_hat = acf(ts.sim,lag.max=2,plot=FALSE,type="covariance")
+gamma_hat = gamma_hat[["acf"]]
+rho_hat = acf(ts.sim,lag.max=2,plot=FALSE,type="correlation")
+rho_hat = rho_hat[["acf"]]
+
+#compare lag-1 and lag-2 autocorrelations,There are two decimal places between the theoretical value and the actual value
+print("sample lag-1 and lag-2 autocorrelations")
+rho_hat[2]
+rho_hat[3]
+print("compare  ACF with analytical")
+rho_hat[2] - p1
+rho_hat[3] - p2
+```
+(d)
+```{r}
+set.seed(1892)
+# Experimentally
+N = 1000 # Number of samples
+r99 = 0.05
+re101 = NULL
+for (i in 1:N){
+    r_e101 = 0.1 - 0.5*0.05 + rnorm(1000, 0, 0.2)[i]
+    re101 <- append(re101,r_e101)
+}
+e_r101 <- mean(re101)
+e_errors101 <- sd(re101)
+
+re102 = NULL
+for (i in 1:N){
+    r_e102 = 0.1 - 0.5*0.2 + rnorm(1000, 0, 0.2)[i]
+    re102 <- append(re102,r_e102)
+}
+e_r102 <- mean(re102)
+e_errors102 <- sd(re102)
+
+AR2table <- as.data.frame(matrix(0,4,2))
+row.names(AR2table) <- c("r101","r102","r101errors", "r102errors")
+names(AR2table) <- c("analytically", "Experimentally")
+AR2table[c(3,4),2] <- c(e_errors101,e_errors102)
+AR2table[c(1,2),2] <- c(e_r101,e_r102)
+AR2table[c(1,2),1] <- c(r101,r102)
+AR2table[c(3,4),1] <- c(r101_sig2,r102_sig2)
+AR2table
+#there is not to much difference
+```
+
+
+
+Problem 2
+(i)mean and variance
+```{r}
+c0 <- 0
+sita1 <- -0.1
+sig <- 0.01
+print("mean and variance of the return series R")
+mu <- c0
+mu
+var_rt <- (1+sita1^2)*sig
+var_rt
+```
+
+(ii) autocorrelations
+```{r}
+map1 <- -sita1/(1+sita1^2)
+print("ACF = 0 for l > q, here l is 2, but q is 1, so  lag-2 autocorrelations is 0")
+map2 <- 0
+print(" lag-1 and lag-2 autocorrelations of Rt")
+c(map1,map2)
+```
+(iii) forecast
+```{r}
+a100 = 0.01
+print(" 1-step ahead forecast return and errors")
+t_r101 = c0 + sita1*a100
+t_r101
+t_errors <- sig
+t_errors
+print(" 2-step ahead forecast return and errors")
+t_r102 = c0
+t_r102
+t_errors2 <- (1+sita1^2)*sig
+t_errors2
+
+```
+
+
+(iv)
+(a)
+```{r}
+set.seed(1566)
+T = 1000 # Time steps
+ts.sim = arima.sim(n=T, model=list(ma=sita1),
+                   innov=sqrt(sig)*rnorm(T))
+```
+(b)
+```{r}
+print("find the sample mean and variance")
+c(mean(ts.sim),var(ts.sim))
+print("compare  mean and variance with analytical")
+mean(ts.sim) - mu
+var(ts.sim) - var_rt
+```
+(c)
+```{r}
+mu_hat = mean(ts.sim)
+gamma_hat = acf(ts.sim,lag.max=2,plot=FALSE,type="covariance")
+gamma_hat = gamma_hat[["acf"]]
+rho_hat = acf(ts.sim,lag.max=2,plot=FALSE,type="correlation")
+rho_hat = rho_hat[["acf"]]
+print("sample lag-1 and lag-2 autocorrelations")
+rho_hat[2]
+rho_hat[3]
+print("compare  ACF with analytical")
+rho_hat[2] - map1
+rho_hat[3] - map2
+```
+(d) repeated simulations to forecast this time series.
+For this question I used two different methods 
+```{r}
+print("The first method is using arima.sim function")
+set.seed(1075)
+N = 1000 # Number of samples
+r1_hat = 0 # 1 step ahead forecast
+rsq1 = 0 # square of 1 step ahead
+r2_hat = 0 # 2 step ahead forecast
+rsq2 = 0 # square of 2 step ahead
+for (iter in 1:N){
+  ts.sim = arima.sim(n=3, model=list(ma=sita1), 
+                     innov=(c0+sqrt(sig)*rnorm(T)),
+                     n.start=1, start.innov=c(a100/sita1))
+  r1_hat = r1_hat + ts.sim[2]
+  rsq1 = rsq1 + ts.sim[2]^2
+  r2_hat = r2_hat + ts.sim[3]
+  rsq2 = rsq2 + ts.sim[3]^2
+}
+r1_hat = r1_hat/N
+r1_sig2_hat = 1/(N-1)*(rsq1-N*r1_hat^2) 
+r2_hat = r2_hat/N
+r2_sig2_hat = 1/(N-1)*(rsq2-N*r2_hat^2)
+
+MA1table <- as.data.frame(matrix(0,4,2))
+row.names(MA1table) <- c("1-step","2-step","1-errors", "2-errors")
+names(MA1table) <- c("analytically", "Experimentally")
+MA1table[c(3,4),2] <- c(r1_sig2_hat,r2_sig2_hat)
+MA1table[c(1,2),2] <- c(r1_hat,r2_hat)
+MA1table[c(1,2),1] <- c(t_r101,t_r102)
+MA1table[c(3,4),1] <- c(t_errors,t_errors2)
+MA1table
+
+```
+
+```{r}
+print("the secone method is using the formula and repeat 1000 times ")
+set.seed(1891)
+N = 1000 # Number of samples
+a100 = 0.01
+c0 <- 0
+sita1 <- -0.1
+sig <- 0.01
+re101 = NULL
+for (i in 2:N){
+    r_e101 = c0 + rnorm(1000, 0, 0.2)[i] - sita1 * rnorm(1000, 0, 0.2)[i-1]
+    re101 <- append(re101,r_e101)
+}
+e_r101 <- mean(re101)
+e_errors101 <- sd(re101)
+
+re102 = NULL
+for (i in 1:N){
+    r_e102 = c0 + rnorm(1000, 0, 0.2)[i] - sita1 * rnorm(1000, 0, 0.2)[i-1]
+    re102 <- append(re102,r_e102)
+}
+e_r102 <- mean(re102)
+e_errors102 <- sd(re102)
+
+MA1table <- as.data.frame(matrix(0,4,2))
+row.names(MA1table) <- c("1-step","2-step","1-errors", "2-errors")
+names(MA1table) <- c("analytically", "Experimentally")
+MA1table[c(3,4),2] <- c(e_errors101,e_errors102)
+MA1table[c(1,2),2] <- c(e_r101,e_r102)
+MA1table[c(1,2),1] <- c(t_r101,t_r102)
+MA1table[c(3,4),1] <- c(t_errors,t_errors2)
+MA1table
+```
+
+
+
+
+Problem 3
+(i)
+```{r message=FALSE, warning=FALSE}
+library(gdata)
+Moodys <- read.csv("homework02.csv")
+
+```
+
+(ii)
+```{r message=FALSE, warning=FALSE}
+library(fBasics)
+price <- Moodys$AAA
+mean(price)
+sd(price)
+skewness(price) 
+kurtosis(price) 
+```
+(iii)
+```{r message=FALSE, warning=FALSE}
+library(quantmod)
+library(fBasics)
+library(tseries)
+n <- length(price);
+logre <- log(price[-1]/price[-n])
+
+adf.test(price, alternative="stationary")
+adf.test (diff(price),alternative ="stationary")
+best = 10^5
+for (p in 0:5){ # Loop through different choices for AR and MA lengths (p and q)
+  for (q in 0:5){
+    tmp = arima(logre, order=c(p,0,q))
+    if (BIC(tmp) < best){ # Use BIC to evaluate performance. Other options available
+      mdl = tmp 
+      best = BIC(tmp) # Choose the model with the best BIC
+    }            
+  }
+}
+mdl
+
+print("the best is ma1")
+```
+
+
+
+
+
+
+
+
+
+
+
