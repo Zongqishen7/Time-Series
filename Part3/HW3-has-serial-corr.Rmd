@@ -1,0 +1,62 @@
+---
+title: "FA542-homework3"
+author: "Zongqi"
+date: "3/5/2022"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+I will get different result of serial correlations, if i use different lag. So this is second version(exist serial correlations.) of my homework 3. 
+
+
+(i) Download daily price data for January 1, 1987 through December 31, 2021 of Microsoft
+stock from Yahoo Finance. You may use the quantmod package in R for this purpose.
+```{r message=FALSE, warning=FALSE}
+library(quantmod)
+library(fBasics)
+library(tseries)
+getSymbols('MSFT',src='yahoo',from='1987-01-01',to='2021-12-31')
+M_sreturn = monthlyReturn(MSFT,type="log")
+```
+(ii) Is there any evidence of serial correlations in the monthly log returns. Use autocorrelations and 5% significance level to answer the question. If yes, remove the serial correlations.
+```{r}
+Box.test(M_sreturn,lag=9,type="Ljung-Box")
+#there exist serial correlations.
+best = 0
+for (p in 0:5){ # Loop through different choices for AR and MA lengths (p and q)
+  for (q in 0:5){
+    tmp = arima(M_sreturn, order=c(p,1,q))
+    if (BIC(tmp) < best){ # Use BIC to evaluate performance. Other options available
+      mdl = tmp 
+      best = BIC(tmp) # Choose the model with the best BIC
+    }            
+  }
+}
+# Fit a linear model to remove the serial correlations
+#From previous part we can choose MA(1)model and take out the residuals
+mdl = arima(M_sreturn, order=c(0,0,1))
+```
+(iii) Is there any evidence of ARCH effects in the monthly log returns? Use the residual
+series if there are serial correlations in part (ii). Use Ljung-Box statistics for the squared
+returns (or residuals) with 6 and 12 lags of autocorrelations and 5% significance level
+to answer the question.
+```{r}
+# Test for ARCH effects in the residuals
+at = mdl$residuals
+Box.test(at^2,lag=6,type="Ljung-Box") #ARCH effects exist
+Box.test(at^2,lag=12,type="Ljung-Box")
+```
+
+(iv) Identify an ARCH model for the data and fit the identified model. Write down the
+fitted model and justify your choice of parameters.
+```{r message=FALSE, warning=FALSE}
+library(fGarch)
+# Fit an ARCH model to the residuals
+pacf(at^2,lag=12) #by inspection consider ARCH(9) model
+ARCH = garchFit(formula=~garch(9,0), data=M_sreturn, trace=FALSE)
+print("I choose 9 becauese, when it is 10, PACF drop blow 0")
+```
+
+
+
